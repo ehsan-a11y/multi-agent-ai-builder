@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-Agent AI Builder</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #7c3aed, #2563eb, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    .hero p {
+      color: #888;
+      font-size: 1.05rem;
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .pipeline-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 20px 0 36px;
+      flex-wrap: wrap;
+    }
+
+    .agent-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      color: #a0a0c0;
+    }
+
+    .agent-badge .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    .arrow { color: #444; font-size: 1rem; }
+
+    .card {
+      background: #161616;
+      border: 1px solid #222;
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 720px;
+      margin-bottom: 24px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    #goal-input {
+      flex: 1;
+      background: #0f0f0f;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #goal-input:focus { border-color: #7c3aed; }
+    #goal-input::placeholder { color: #444; }
+
+    #build-btn {
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 14px 26px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    #build-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    #build-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .examples {
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .example-chip {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.78rem;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .example-chip:hover {
+      background: #222;
+      color: #bbb;
+      border-color: #444;
+    }
+
+    /* Progress */
+    #progress-card { display: none; }
+
+    .stage-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .stage {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      background: #0f0f0f;
+      border: 1px solid #1e1e1e;
+      border-radius: 10px;
+      transition: all 0.3s;
+    }
+
+    .stage.active {
+      border-color: #7c3aed;
+      background: #1a1030;
+    }
+
+    .stage.done {
+      border-color: #16a34a;
+      background: #0a1a0f;
+    }
+
+    .stage-icon {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .stage.pending .stage-icon { background: #1e1e1e; color: #444; }
+    .stage.active .stage-icon { background: #3b0764; color: #c084fc; }
+    .stage.done .stage-icon { background: #14532d; color: #4ade80; }
+
+    .stage-info { flex: 1; }
+    .stage-name { font-weight: 600; font-size: 0.9rem; }
+    .stage-desc { font-size: 0.78rem; color: #666; margin-top: 2px; }
+    .stage.active .stage-desc { color: #a78bfa; }
+    .stage.done .stage-desc { color: #4ade80; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid #3b0764;
+      border-top-color: #c084fc;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Results */
+    #result-card { display: none; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .result-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .quality-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .quality-excellent { background: #14532d; color: #4ade80; }
+    .quality-good { background: #1e3a5f; color: #60a5fa; }
+    .quality-needs_improvement { background: #451a03; color: #fb923c; }
+
+    .file-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .file-tab {
+      padding: 5px 12px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      color: #888;
+      transition: all 0.15s;
+    }
+
+    .file-tab.active { background: #1a1030; border-color: #7c3aed; color: #c084fc; }
+    .file-tab:hover:not(.active) { background: #222; color: #bbb; }
+
+    .code-viewer {
+      background: #0a0a0a;
+      border: 1px solid #1e1e1e;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #111;
+      border-bottom: 1px solid #1e1e1e;
+      font-size: 0.78rem;
+      color: #666;
+    }
+
+    .copy-btn {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      color: #888;
+      padding: 3px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover { background: #222; color: #bbb; }
+
+    pre {
+      padding: 20px;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: #c9d1d9;
+      max-height: 420px;
+    }
+
+    .download-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      justify-content: flex-end;
+    }
+
+    .dl-btn {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      color: #a0a0c0;
+      padding: 8px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.15s;
+    }
+
+    .dl-btn:hover { background: #222; border-color: #7c3aed; color: #c084fc; }
+
+    .review-summary {
+      background: #0f0f0f;
+      border: 1px solid #1e1e1e;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-top: 16px;
+      font-size: 0.85rem;
+      color: #888;
+      line-height: 1.6;
+    }
+
+    .elapsed { font-size: 0.78rem; color: #555; margin-top: 12px; text-align: right; }
+
+    #error-card {
+      display: none;
+      background: #1a0a0a;
+      border: 1px solid #7f1d1d;
+      border-radius: 12px;
+      padding: 20px 24px;
+      color: #fca5a5;
+      max-width: 720px;
+      width: 100%;
+    }
+
+    .error-title { font-weight: 600; margin-bottom: 8px; }
+    .error-msg { font-size: 0.85rem; color: #f87171; }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <h1>Multi-Agent AI Builder</h1>
+    <p>4 specialized AI agents collaborate to plan, research, build, and review your project — fully automated.</p>
+  </div>
+
+  <div class="pipeline-row">
+    <div class="agent-badge"><div class="dot" style="background:#a855f7"></div>Planner</div>
+    <span class="arrow">→</span>
+    <div class="agent-badge"><div class="dot" style="background:#3b82f6"></div>Researcher</div>
+    <span class="arrow">→</span>
+    <div class="agent-badge"><div class="dot" style="background:#06b6d4"></div>Executor</div>
+    <span class="arrow">→</span>
+    <div class="agent-badge"><div class="dot" style="background:#22c55e"></div>Reviewer</div>
+    <span class="arrow">→</span>
+    <div class="agent-badge"><div class="dot" style="background:#f59e0b"></div>Auto-Fix</div>
+  </div>
+
+  <!-- Input Card -->
+  <div class="card">
+    <div class="input-row">
+      <input
+        id="goal-input"
+        type="text"
+        placeholder="What should I build? e.g. Build me a portfolio website with dark theme"
+      />
+      <button id="build-btn" onclick="startBuild()">Build →</button>
+    </div>
+    <div class="examples">
+      <span class="example-chip" onclick="setGoal(this)">Portfolio website with dark theme</span>
+      <span class="example-chip" onclick="setGoal(this)">Landing page for a coffee shop</span>
+      <span class="example-chip" onclick="setGoal(this)">To-do list app with local storage</span>
+      <span class="example-chip" onclick="setGoal(this)">Restaurant menu website</span>
+    </div>
+  </div>
+
+  <!-- Progress Card -->
+  <div class="card" id="progress-card">
+    <p style="color:#888;font-size:0.85rem;margin-bottom:18px">Agents are working on your project...</p>
+    <ul class="stage-list">
+      <li class="stage pending" id="stage-planner">
+        <div class="stage-icon">1</div>
+        <div class="stage-info">
+          <div class="stage-name">Planner</div>
+          <div class="stage-desc">Analyzing goal and creating execution plan</div>
+        </div>
+      </li>
+      <li class="stage pending" id="stage-researcher">
+        <div class="stage-icon">2</div>
+        <div class="stage-info">
+          <div class="stage-name">Researcher</div>
+          <div class="stage-desc">Gathering best practices and patterns</div>
+        </div>
+      </li>
+      <li class="stage pending" id="stage-executor">
+        <div class="stage-icon">3</div>
+        <div class="stage-info">
+          <div class="stage-name">Executor</div>
+          <div class="stage-desc">Generating all project files</div>
+        </div>
+      </li>
+      <li class="stage pending" id="stage-reviewer">
+        <div class="stage-icon">4</div>
+        <div class="stage-info">
+          <div class="stage-name">Reviewer</div>
+          <div class="stage-desc">Reviewing code quality and correctness</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Error Card -->
+  <div id="error-card">
+    <div class="error-title">⚠ Build Failed</div>
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+
+  <!-- Result Card -->
+  <div class="card" id="result-card">
+    <div class="result-header">
+      <div class="result-title" id="result-title">Generated Project</div>
+      <div class="quality-badge" id="quality-badge"></div>
+    </div>
+    <div class="file-tabs" id="file-tabs"></div>
+    <div class="code-viewer">
+      <div class="code-header">
+        <span id="active-filename"></span>
+        <button class="copy-btn" onclick="copyCode()">Copy</button>
+      </div>
+      <pre id="code-content"></pre>
+    </div>
+    <div class="review-summary" id="review-summary"></div>
+    <div class="download-row">
+      <button class="dl-btn" onclick="downloadAll()">⬇ Download All Files</button>
+    </div>
+    <div class="elapsed" id="elapsed"></div>
+  </div>
+
+  <script>
+    let currentFiles = {};
+    let activeFile = null;
+
+    function setGoal(el) {
+      document.getElementById('goal-input').value = el.textContent;
+    }
+
+    function setStage(id, state, desc) {
+      const el = document.getElementById('stage-' + id);
+      el.className = 'stage ' + state;
+      if (desc) el.querySelector('.stage-desc').textContent = desc;
+      const icon = el.querySelector('.stage-icon');
+      if (state === 'active') {
+        icon.innerHTML = '<div class="spinner"></div>';
+      } else if (state === 'done') {
+        icon.textContent = '✓';
+      } else {
+        icon.textContent = el.id.replace('stage-', '').replace(/[a-z]/gi, m => m)[0].toUpperCase();
+        const nums = {'planner':'1','researcher':'2','executor':'3','reviewer':'4'};
+        icon.textContent = nums[id] || '?';
+      }
+    }
+
+    async function startBuild() {
+      const goal = document.getElementById('goal-input').value.trim();
+      if (!goal) return;
+
+      // Reset UI
+      document.getElementById('result-card').style.display = 'none';
+      document.getElementById('error-card').style.display = 'none';
+      document.getElementById('progress-card').style.display = 'block';
+      document.getElementById('build-btn').disabled = true;
+      document.getElementById('build-btn').textContent = 'Building...';
+
+      ['planner','researcher','executor','reviewer'].forEach(s => setStage(s, 'pending'));
+
+      // Simulate stage progression while waiting for API
+      const stageDelay = [0, 8000, 25000, 60000];
+      const stages = ['planner','researcher','executor','reviewer'];
+      stages.forEach((s, i) => {
+        setTimeout(() => setStage(s, 'active'), stageDelay[i]);
+      });
+
+      try {
+        const res = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ goal })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          throw new Error(data.error || 'Build failed');
+        }
+
+        stages.forEach(s => setStage(s, 'done'));
+        showResult(data);
+
+      } catch (err) {
+        stages.forEach(s => {
+          const el = document.getElementById('stage-' + s);
+          if (el.classList.contains('active') || el.classList.contains('pending')) {
+            setStage(s, 'pending');
+          }
+        });
+        document.getElementById('error-card').style.display = 'block';
+        document.getElementById('error-msg').textContent = err.message;
+        document.getElementById('progress-card').style.display = 'none';
+      }
+
+      document.getElementById('build-btn').disabled = false;
+      document.getElementById('build-btn').textContent = 'Build →';
+    }
+
+    function showResult(data) {
+      document.getElementById('progress-card').style.display = 'none';
+      document.getElementById('result-card').style.display = 'block';
+
+      document.getElementById('result-title').textContent =
+        data.goal_summary || 'Generated Project';
+
+      const quality = data.review?.quality || 'good';
+      const badge = document.getElementById('quality-badge');
+      badge.textContent = quality.replace('_', ' ').toUpperCase();
+      badge.className = 'quality-badge quality-' + quality;
+
+      currentFiles = data.files || {};
+      const tabs = document.getElementById('file-tabs');
+      tabs.innerHTML = '';
+
+      Object.keys(currentFiles).forEach((path, i) => {
+        const tab = document.createElement('div');
+        tab.className = 'file-tab' + (i === 0 ? ' active' : '');
+        tab.textContent = path;
+        tab.onclick = () => selectFile(path, tab);
+        tabs.appendChild(tab);
+      });
+
+      const firstFile = Object.keys(currentFiles)[0];
+      if (firstFile) selectFile(firstFile, tabs.firstChild);
+
+      if (data.review?.summary) {
+        document.getElementById('review-summary').textContent =
+          '💬 Reviewer: ' + data.review.summary;
+      }
+
+      document.getElementById('elapsed').textContent =
+        `⏱ Completed in ${data.elapsed_seconds}s`;
+    }
+
+    function selectFile(path, tabEl) {
+      activeFile = path;
+      document.querySelectorAll('.file-tab').forEach(t => t.classList.remove('active'));
+      tabEl.classList.add('active');
+      document.getElementById('active-filename').textContent = path;
+      document.getElementById('code-content').textContent = currentFiles[path] || '';
+    }
+
+    function copyCode() {
+      if (!activeFile) return;
+      navigator.clipboard.writeText(currentFiles[activeFile] || '').then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    }
+
+    function downloadAll() {
+      Object.entries(currentFiles).forEach(([path, content]) => {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = path.split('/').pop();
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    document.getElementById('goal-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') startBuild();
+    });
+  </script>
+</body>
+</html>
